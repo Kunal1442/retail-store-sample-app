@@ -1,0 +1,70 @@
+name: CodeQL (multi-language)
+
+on:
+  push:
+    branches: [ main ]          # EDIT: your default branch name
+  pull_request:
+    branches: [ main ]          # EDIT: your default branch name
+  schedule:
+    - cron: '0 3 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+      packages: read
+    strategy:
+      fail-fast: false          # one language failing must not cancel the others
+      matrix:
+        # KEEP only the languages that actually exist in this repo.
+        # Each entry runs as its own parallel job and its own alert category.
+        include:
+          - language: actions               # scans .github/workflows
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: java-kotlin
+            build-mode: none                # or autobuild / manual if none misses code
+          - language: csharp
+            build-mode: none                # or autobuild / manual
+          - language: go
+            build-mode: autobuild
+          # - language: c-cpp               # use autobuild or manual if none is unsupported
+          #   build-mode: autobuild
+          # - language: ruby
+          #   build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+          # Optional: skip generated or vendored code
+          # config: |
+          #   paths-ignore:
+          #     - '**/node_modules/**'
+          #     - '**/vendor/**'
+          #     - '**/test/**'
+
+      # Only needed when build-mode is manual. Replace with your real build
+      # commands, using working-directory if the project is in a subfolder.
+      # - name: Manual build
+      #   if: matrix.build-mode == 'manual'
+      #   run: |
+      #     cd services/api && ./gradlew build -x test
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
